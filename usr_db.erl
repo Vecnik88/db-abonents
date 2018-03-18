@@ -1,4 +1,3 @@
-%% usr_db.erl  %%
 -module(usr_db).
 -include("usr.hrl").
 -export([
@@ -10,7 +9,8 @@
          lookup_msisdn/1,
          get_index/1,
          restore_backup/0,
-         delete_disabled/0
+         delete_disabled/0,
+         delete_usr/1
         ]).
 
 create_tables(FileName) ->
@@ -31,6 +31,16 @@ update_usr(Usr) ->
     ets:insert(usrRam, Usr),
     dets:insert(usrDisk, Usr),
     ok.
+
+delete_usr(CustId) ->
+    case lookup_id(CustId) of
+        {ok, Usr} ->
+            ets:delet(usrIndex, Usr),
+            ets:delete(usrRam, Usr),
+            dets:delete(usrDisk, Usr);
+        {error, instance} ->
+            {error, instance}
+    end.
 
 lookup_id(CustId) ->
     case get_index(CustId) of
@@ -69,7 +79,7 @@ loop_delete_disabled('$end_of_table') ->
 loop_delete_disabled(PhoneNo) ->
     case ets:lookup(usrRam, PhoneNo) of
         [#usr{status=disabled, id = CustId}] ->
-            delete_usr(PhoneNo, CustId);
+            delete_usr(CustId);
         _ ->
             ok
     end,
